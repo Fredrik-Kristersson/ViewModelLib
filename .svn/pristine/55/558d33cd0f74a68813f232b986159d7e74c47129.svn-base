@@ -1,0 +1,68 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Input;
+
+namespace ViewModelLib
+{
+	/// <summary>
+	/// A base class for ViewModels of Dialogs. 
+	/// Implements the generic functionality often needed in a dialog ViewModel.
+	/// Not intended for Main window to inherit from this class.
+	/// </summary>
+	public abstract class DialogViewModelBase : ViewModelBase
+	{
+		private IDialogService dlgService;
+
+		private MyCommand closeNoSaveCommand;
+		private MyCommand closeSaveCommand;
+
+		public DialogViewModelBase(IDialogService dialogService)
+		{
+			dlgService = dialogService;
+			closeNoSaveCommand = new MyCommand(CloseNoSave);
+			closeSaveCommand = new MyCommand(CloseSave, CanCloseSave);
+		}
+
+		public ICommand CloseNoSaveCommand { get { return closeNoSaveCommand; } }
+
+		private void CloseNoSave(object parameter)
+		{
+			DoCloseNoSave(parameter);
+			dlgService.CloseDialog(this, false);
+		}
+
+		public ICommand CloseSaveCommand { get { return closeSaveCommand; } }
+
+		private void CloseSave(object parameter)
+		{
+			DoCloseSave();
+			dlgService.CloseDialog(this, true);
+		}
+
+		#region virtual methods
+
+		/// <summary>
+		/// Override this to do something before dialog closes, but! -
+		/// this represents (most likely) a command that should (probably) not save values if user has selected it.
+		/// E.g. some cancel action.
+		/// </summary>
+		protected virtual void DoCloseNoSave(object parameter) { }
+
+		/// <summary>
+		/// Override this to do something before dialog closes, but! -
+		/// this represents (most likely) a command that should (probably) save values if user has selected it.
+		/// E.g. ok action.
+		/// </summary>
+		protected virtual void DoCloseSave() { }
+
+		protected virtual bool CanCloseSave()
+		{
+			return true;
+		}
+
+		#endregion
+	}
+}

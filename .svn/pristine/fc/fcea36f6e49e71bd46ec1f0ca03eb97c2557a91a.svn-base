@@ -1,0 +1,56 @@
+﻿<Window x:Class="ViewModelLib.IntegerTextBoxDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Background="Black"
+        xmlns:local="clr-namespace:ViewModelLib"
+        ResizeMode="NoResize"
+        FocusManager.FocusedElement="{Binding ElementName=IntegerTextBox}"        
+        Top="{Binding Path=YPosition, Mode=TwoWay}"
+        Left="{Binding Path=XPosition, Mode=TwoWay}"
+        Width="48"
+        Height="29"
+        WindowStyle="None"
+        ShowInTaskbar="False"
+        >
+    <!-- Above, for some reason the Top, Left window properties have to be twoway to work... -->
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="MyStyleDictionary.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <Style TargetType="local:IntegerTextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                <Style.Triggers>
+                    <Trigger Property="Validation.HasError" Value="true">
+                        <Setter Property="ToolTip" Value="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.Errors)[0].ErrorContent}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+        </ResourceDictionary>
+        
+    </Window.Resources>
+    <Canvas Name="MainCanvas" Background="Black">
+
+        <Border BorderBrush="Chocolate" BorderThickness="1" Background="Black" CornerRadius="1" Margin="3,4,3,0">
+            <local:IntegerTextBox x:Name="IntegerTextBox"
+                                Text="{Binding Path=TextBoxText, ValidatesOnDataErrors=true,UpdateSourceTrigger=PropertyChanged, Mode=TwoWay, BindsDirectlyToSource=True }"
+                                Background="Black"  BorderBrush="Chocolate" BorderThickness="0" 
+                                Foreground="Chocolate" MaxWidth="30" Width="30" MaxNumberIntegers="3"
+                                SelectionBrush="Chocolate">
+            </local:IntegerTextBox>
+        </Border>
+
+        <Button Canvas.Top="0" Canvas.Right="0" Style="{StaticResource CloseButtonStyle}" IsCancel="True" 
+                Margin="1,0,3,1"
+                FontFamily="Verdana"  FontSize="10" ToolTip="close without saving" 
+                Command="{Binding CloseNoSaveCommand}"/>
+
+        <Button Canvas.Bottom="0" Canvas.Right="0" Style="{StaticResource CloseSaveButtonStyle}" ToolTip="close and save" 
+                Margin="3" FontSize="10" IsDefault="True"
+                Command="{Binding Path=CloseSaveCommand}" />
+    </Canvas>
+
+</Window>
+

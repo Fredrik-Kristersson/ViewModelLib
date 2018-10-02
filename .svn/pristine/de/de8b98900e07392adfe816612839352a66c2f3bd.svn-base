@@ -1,0 +1,36 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.ComponentModel;
+
+namespace ViewModelLib
+{
+	public class ViewModelBase : INotifyPropertyChanged, IDataErrorInfo
+    {
+        #region INotifyPropertyChanged Members
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected void OnPropertyChanged(string propertyName)
+        {
+            PropertyChangedEventHandler handler = PropertyChanged;
+            if(handler != null)
+            {
+                handler.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            }
+        }
+
+        #endregion
+
+		public virtual string Error
+		{
+			get { throw new NotImplementedException(); }
+		}
+
+		public virtual string this[string columnName]
+		{
+			get { throw new NotImplementedException(); }
+		}
+	}
+}

@@ -1,0 +1,77 @@
+﻿using Microsoft.Win32;
+using System.Collections.Generic;
+using System.Windows;
+
+namespace ViewModelLib
+{
+	public class DefaultDialogService : IDialogService
+	{
+		// TODO: Implement own error/msg dialog. 
+
+		private Window owner;
+
+		private Dictionary<ViewModelBase, Window> openDialogWindows = new Dictionary<ViewModelBase, Window>();
+
+		public DefaultDialogService(Window owner)
+		{
+			this.owner = owner;
+		}
+
+		public string OpenFileDialog(string filter)
+		{
+			OpenFileDialog dlg = new OpenFileDialog();
+			dlg.Multiselect = false;
+
+
+			dlg.Filter = filter;
+			bool? result = dlg.ShowDialog(owner);
+
+			if (result == true)
+			{
+				string filename = dlg.FileName;
+				return filename;
+			}
+			return null;
+		}
+
+		public void ShowMessageBox(string title, string information)
+		{
+			MessageBox.Show(owner, information, title, MessageBoxButton.OK, MessageBoxImage.Error);
+		}
+
+
+		public bool? OpenDialogWindow(Window parent, Window dialog, ViewModelBase viewModel)
+		{
+			if (parent != null)
+			{
+				dialog.Owner = parent;
+			}
+			else 
+			{
+				dialog.Owner = owner;
+			}
+			dialog.DataContext = viewModel;
+			openDialogWindows.Add(viewModel, dialog);
+			dialog.ShowActivated = true;
+			return dialog.ShowDialog();
+		}
+		
+		/// <summary>
+		/// Closes the dialog corresponding with ViewModel vm.
+		/// Possible "memory leak", because this method may not always be called when a window closes 
+		/// (i.e. not removed from dictionary).
+		/// </summary>
+		/// <param name="vm">The corresponding view model</param>
+		/// <param name="accepted">bool that specifies whether the activity was accepted (true) or canceled (false)</param>
+		public void CloseDialog(ViewModelBase vm, bool accepted) 
+		{
+			if(openDialogWindows.ContainsKey(vm))
+			{
+				Window dialog = openDialogWindows[vm];
+				dialog.DialogResult = accepted;
+				dialog.Close();
+				openDialogWindows.Remove(vm);
+			}			
+		}
+	}
+}

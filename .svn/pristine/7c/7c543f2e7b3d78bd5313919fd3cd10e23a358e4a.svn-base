@@ -1,0 +1,17 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+
+namespace ViewModelLib
+{
+	public interface IDialogService
+	{
+		string OpenFileDialog(string filter);
+		void ShowMessageBox(string title, string information);
+		bool? OpenDialogWindow(Window parent, Window dialog, ViewModelBase viewModel);
+		void CloseDialog(ViewModelBase vm, bool accepted);
+	}
+}
