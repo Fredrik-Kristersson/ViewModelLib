@@ -16,9 +16,8 @@ namespace ViewModelLib
 
         /// <summary>
         /// Initialize the logger with a log4net xml config file.
-        /// Debug mode will automatically append to console.
         /// </summary>
-        /// <param name="configFilePath"></param>
+        /// <param name="configFilePath">The file path to the log4net config file.</param>
         public void InitializeLogger(string configFilePath)
         {
             XmlConfigurator.Configure(new FileInfo(configFilePath));

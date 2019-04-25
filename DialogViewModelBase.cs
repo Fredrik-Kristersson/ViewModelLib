@@ -1,71 +1,59 @@
-﻿using System.Windows.Input;
+﻿using System;
+using System.ComponentModel.Composition;
+using System.Windows.Input;
 
 namespace ViewModelLib
 {
 	/// <summary>
 	/// A base class for ViewModels of Dialogs. 
 	/// Implements the generic functionality often needed in a dialog ViewModel.
-	/// Not intended for Main window to inherit from this class.
 	/// </summary>
-	public abstract class DialogViewModelBase : ViewModelBase
+	[Export(typeof(IDialogViewModelBase))]
+	public abstract class DialogViewModelBase : ViewModelBase, IDialogViewModelBase
 	{
-		private IDialogService dlgService;
-
-		private readonly MyCommand closeNoSaveCommand;
-		private readonly MyCommand closeSaveCommand;
-
-		protected DialogViewModelBase(IDialogService dialogService)
+		[ImportingConstructor]
+		protected DialogViewModelBase(IDialogService dialogService) : base()
 		{
-			dlgService = dialogService;
-			closeNoSaveCommand = new MyCommand(CloseNoSave);
-			closeSaveCommand = new MyCommand(CloseSave, CanCloseSave);
+			DialogService = dialogService;
+			OkCommand = new MyCommand(OnOk, CanExecuteOk);
 		}
 
-		public ICommand CloseNoSaveCommand => closeNoSaveCommand;
+		public ICommand OkCommand { get; set; }
 
-		private void CloseNoSave(object parameter)
-		{
-			DoCloseNoSave(parameter);
-			dlgService.CloseDialog(this, false);
-		}
-
-		public ICommand CloseSaveCommand => closeSaveCommand;
-
-		private void CloseSave(object parameter)
-		{
-			bool result = DoCloseSave();
-			if (result)
-			{
-				dlgService.CloseDialog(this, true);
-			}
-			else
-			{
-				//Do something to fix error...
-			}
-		}
+		protected IDialogService DialogService { get; }
 
 		/// <summary>
-		/// Override this to do something before dialog closes, but! -
-		/// this represents (most likely) a command that should (probably) not save values if user has selected it.
-		/// E.g. cancel action.
+		/// Sub classes can override this to do finishing up logic before dialog closes,
+		/// or stop the closing by returning false. The sub class must map the ok command to
+		/// something for this to have any effect.
+		/// NOTE: This method will not be invoked when a dialog is closed by other means.
 		/// </summary>
-		protected virtual void DoCloseNoSave(object parameter) { }
-
-
-		/// <summary>
-		/// Override this to do something before dialog closes, but! -
-		/// this represents (most likely) a command that should (probably) save values if user has selected it.
-		/// E.g. ok action.
-		/// </summary>
-		/// <returns>True if dialog can/should close, false otherwise</returns>
-		protected virtual bool DoCloseSave()
+		protected virtual bool Ok()
 		{
 			return true;
 		}
 
-		protected virtual bool CanCloseSave()
+		private bool CanExecuteOk()
 		{
-			return true;
+			return IsValidated();
+		}
+
+		private void OnOk(object obj)
+		{
+			if (Ok())
+			{
+				DialogService.CloseDialog(this, true);
+			}
+		}
+
+		protected void Close()
+		{
+			DialogService.CloseDialog(this);
+		}
+
+		protected void OpenDialog(Type windowType, IDialogViewModelBase vm)
+		{
+			DialogService.OpenDialogWindow(windowType, vm, this);
 		}
 	}
 }

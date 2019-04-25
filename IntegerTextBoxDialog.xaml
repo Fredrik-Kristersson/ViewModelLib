@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Background="Black"
         xmlns:local="clr-namespace:ViewModelLib"
+        xmlns:attachedProperties="clr-namespace:ViewModelLib.AttachedProperties"
         ResizeMode="NoResize"
         FocusManager.FocusedElement="{Binding ElementName=IntegerTextBox}"        
         Top="{Binding Path=YPosition, Mode=TwoWay}"
@@ -10,8 +11,7 @@
         Width="48"
         Height="29"
         WindowStyle="None"
-        ShowInTaskbar="False"
-        >
+        ShowInTaskbar="False">
     <!-- Above, for some reason the Top, Left window properties have to be twoway to work... -->
 
     <Window.Resources>
@@ -49,7 +49,7 @@
 
         <Button Canvas.Bottom="0" Canvas.Right="0" Style="{StaticResource CloseSaveButtonStyle}" ToolTip="close and save" Foreground="Chocolate"
                 Margin="3" FontSize="10" IsDefault="True"
-                Command="{Binding Path=CloseSaveCommand}" />
+                Command="{Binding Path=OkCommand}" />
     </Canvas>
 
 </Window>

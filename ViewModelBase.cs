@@ -4,122 +4,140 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 namespace ViewModelLib
 {
-    public class ViewModelBase : IViewModelBase
-    {
-        private bool isDirty;
-        private readonly ConcurrentDictionary<string, object> propertyValues =
-            new ConcurrentDictionary<string, object>();
+	public abstract class ViewModelBase : IViewModelBase
+	{
+		private bool isDirty;
+		private readonly ConcurrentDictionary<string, bool> dirtyDictionary =
+				new ConcurrentDictionary<string, bool>();
+		private readonly ConcurrentDictionary<string, object> propertyValues =
+				new ConcurrentDictionary<string, object>();
 
-        private readonly IDictionary<string, List<ValidationFuncMessage>> validators =
-            new Dictionary<string, List<ValidationFuncMessage>>();
+		private readonly IDictionary<string, List<ValidationFuncMessage>> validators =
+				new Dictionary<string, List<ValidationFuncMessage>>();
 
-        public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler PropertyChanged;
 
-        public bool IsDirty
-        {
-            get => isDirty;
-            set
-            {
-                if (isDirty == value)
-                {
-                    return;
-                }
+		public bool IsDirty
+		{
+			get => isDirty;
+			set
+			{
+				if (isDirty == value)
+				{
+					return;
+				}
 
-                isDirty = value;
-                OnPropertyChanged("IsDirty");
-            }
-        }
+				isDirty = value;
+				if (value)
+				{
+					dirtyDictionary.Clear();
+				}
 
-        protected void OnPropertyChanged(string propertyName)
-        {
-            var handler = PropertyChanged;
-            handler?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+				OnPropertyChanged("IsDirty");
+			}
+		}
 
-        /// <summary>
-        /// Send notify property changed event for all properties.
-        /// </summary>
-        protected void NotifyAll()
-        {
-            // NOTE: Dictionary does not necessarily contain all properties,
-            // probably need to use reflection to be sure all properties are affected.
-            foreach (var propertyValuesKey in propertyValues.Keys)
-            {
-                OnPropertyChanged(propertyValuesKey);
-            }
-        }
+		protected void OnPropertyChanged(string propertyName)
+		{
+			var handler = PropertyChanged;
+			handler?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+		}
 
-        protected void Set<T>(T value, [CallerMemberName] string memberName = "")
-        {
-            var oldValue = Get<T>(memberName);
-            if (EqualityComparer<T>.Default.Equals(oldValue, value))
-            {
-                return;
-            }
+		/// <summary>
+		/// Send notify property changed event for all properties.
+		/// </summary>
+		protected void NotifyAll()
+		{
+			// NOTE: Dictionary does not necessarily contain all properties,
+			// probably need to use reflection to be sure all properties are affected.
+			foreach (var propertyValuesKey in propertyValues.Keys)
+			{
+				OnPropertyChanged(propertyValuesKey);
+			}
+		}
 
-            propertyValues.AddOrUpdate(memberName, value, (k, v) => value);
-            OnPropertyChanged(memberName);
-            IsDirty = true;
-        }
+		protected void Set<T>(T value, [CallerMemberName] string memberName = "")
+		{
+			var oldValue = Get<T>(memberName);
+			if (EqualityComparer<T>.Default.Equals(oldValue, value))
+			{
+				return;
+			}
 
-        protected T Get<T>([CallerMemberName] string memberName = "")
-        {
-            return propertyValues.TryGetValue(memberName, out var result) ? (T)result : default(T);
-        }
+			propertyValues.AddOrUpdate(memberName, value, (k, v) => value);
+			dirtyDictionary.AddOrUpdate(memberName, true, (k, v) => true);
+			IsDirty = true;
+			OnPropertyChanged(memberName);
+		}
 
-        /// <summary>
-        /// Returns true if all the validations pass, false otherwise.
-        /// </summary>
-        protected bool IsValidated()
-        {
-            return
-                validators.Values.SelectMany(validator => validator)
-                .All(validationFuncMessage => !validationFuncMessage.ValidationFunc());
-        }
+		protected T Get<T>([CallerMemberName] string memberName = "")
+		{
+			return propertyValues.TryGetValue(memberName, out var result) ? (T)result : default(T);
+		}
 
-        protected void AddValidator(
-            string propertyName, Func<bool> validateFunc, string validationMessage)
-        {
-            if (!validators.TryGetValue(propertyName, out var validatorList))
-            {
-                validatorList = new List<ValidationFuncMessage>();
-                validators.Add(propertyName, validatorList);
-            }
+		/// <summary>
+		/// Returns true if all the validations pass, false otherwise.
+		/// </summary>
+		protected bool IsValidated()
+		{
+			return
+					validators.Values.SelectMany(validator => validator)
+					.All(validationFuncMessage => !validationFuncMessage.ValidationFunc());
+		}
 
-            validatorList.Add(
-                new ValidationFuncMessage
-                {
-                    ValidationFunc = validateFunc,
-                    ValidationMessage = validationMessage
-                });
-        }
+		protected void AddValidator(
+				string propertyName, Func<bool> validateFunc, string validationMessage)
+		{
+			if (!validators.TryGetValue(propertyName, out var validatorList))
+			{
+				validatorList = new List<ValidationFuncMessage>();
+				validators.Add(propertyName, validatorList);
+			}
 
-        public virtual string this[string propertyName]
-        {
-            get
-            {
-                if (!validators.TryGetValue(propertyName, out var validatorList))
-                {
-                    return string.Empty;
-                }
+			validatorList.Add(
+					new ValidationFuncMessage
+					{
+						ValidationFunc = validateFunc,
+						ValidationMessage = validationMessage
+					});
+		}
 
-                var error = validatorList.FirstOrDefault(v => v.ValidationFunc());
+		public virtual string this[string propertyName]
+		{
+			get
+			{
+				if (!validators.TryGetValue(propertyName, out var validatorList))
+				{
+					return string.Empty;
+				}
 
-                return error != null ? error.ValidationMessage : string.Empty;
-            }
-        }
+				var error = validatorList.FirstOrDefault(v => v.ValidationFunc());
 
-        public virtual string Error => throw new NotImplementedException();
+				return error != null && dirtyDictionary.ContainsKey(propertyName) ? error.ValidationMessage : string.Empty;
+			}
+		}
 
-        private class ValidationFuncMessage
-        {
-            public Func<bool> ValidationFunc { get; set; }
+		public virtual string Error => throw new NotImplementedException();
 
-            public string ValidationMessage { get; set; }
+		public virtual Task OnUnloadAsync()
+		{
+			return Task.CompletedTask;
+		}
 
-        }
-    }
+		public virtual Task OnLoadAsync()
+		{
+			return Task.CompletedTask;
+		}
+
+		private class ValidationFuncMessage
+		{
+			public Func<bool> ValidationFunc { get; set; }
+
+			public string ValidationMessage { get; set; }
+		}
+	}
 }
